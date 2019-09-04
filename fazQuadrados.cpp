@@ -57,65 +57,136 @@ bool compare(blob b1, blob b2){
 	return b1.Area > b2.Area;
 }
 
+typedef struct{
+     int start;
+     int width;
+     int areaBlob;
+     int parent;
+     int parentRow;
+     int sumX;
+     int sumY;
+     uchar color;
+}Run;
+
+std::vector< std::vector<Run> > run(const cv::Mat &matrix){
+    std::vector< std::vector<Run> > runs;
+   
+
+    int runLenght;
+    for (int i=0; i < matrix.rows; i++) {
+
+        const uchar * pt = matrix.ptr<uchar>(i);
+        std::vector<Run> line;
+
+        for (int j=0; j < matrix.cols; j++) {
+
+            for (runLenght = 0; runLenght + j < matrix.cols && pt[j + runLenght]!=0; runLenght++);
+
+            Run current;
+            current.start = j;
+            current.color = pt[j];
+            current.width = runLenght;
+            current.areaBlob = current.width;
+            current.parent = -1;
+            current.sumX = i * current.width;
+            current.sumY = current.width * ((current.width/2) + current.start);
+
+            if (current.color != 0) line.push_back(current);
+            j+=runLenght;
+        }
+
+        runs.push_back(line);
+    }
+    return runs;
+
+}
+
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
+    uchar cor;
+    int diff;
+
+    Run r1, r2;
+    unsigned long i1, i2; //indexes for first and second row
+
+    // union find
+    for(unsigned long row = 1 ; row < runs.size() ; row++){
+        i1=0, i2=0;
+
+        while(i2 < runs[row].size() && i1 < runs[row-1].size()) {
+            r1 = runs[row-1][i1], r2 = runs[row][i2];
+
+            if (( (r2.start <= r1.start && r1.start < r2.start+r2.width)
+                      || (r1.start <= r2.start && r2.start < r1.start+r1.width) ) ) {
+
+                if (r1.parent == -1) {
+                    r1.parent = i2;
+                    r1.parentRow = row;
+
+                    r2.areaBlob += r1.areaBlob;
+                    r2.sumX += r1.sumX;
+                    r2.sumY += r1.sumY;
+                }
+            }
+
+            runs[row-1][i1] = r1;
+            runs[row][i2] = r2;
+
+            diff = (r2.start + r2.width) - (r1.start + r1.width);
+
+            if(diff >= 0) i1++;
+            if(diff <= 0) i2++;
+
+        }
+
+    }
+
+    // turning fathers into blobs
+    blob varBlob;
+    Run r;
+    int countBlobs =0;
+    for(unsigned long i = 0 ; i < runs.size() ; i++){
+
+        for(unsigned long j  = 0 ; j < runs[i].size() ; j++){
+            r = runs[i][j];
+
+            if(r.parent == -1) {
+                cor = runs[i][j].color;
+                varBlob.posx = r.sumY / r.areaBlob;
+                varBlob.posy = r.sumX / runs[i][j].areaBlob;
+
+                countBlobs++;
+                cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(255,0,0),1, CV_AA);
+            }
+
+        }
+    }
+    
+    runs.clear();
+}
+
+
 int main(void){
 	cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
 	cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
-	cv::resize(mat,mat,cv::Size(500,500));
-	cv::resize(matRGB,matRGB,mat.size());
-
 	cv::Mat mat_ref(mat.size(), CV_64FC1, cv::Scalar(0));
 
 
+	/*😁️
 
-	cv::imshow("testado e aprovado",mat);
-	int i,j;
-	std::vector < blob > blobs;
-	/*for(i = 0; i < mat.rows; i++) //inicializando a matriz de referencia
-		for(j=0;j < size;j++)😁️
-			mat_ref[i][j] = false;
 	*/
-	for(i = 0; i < mat.cols;i++){
-		const uchar * pt = mat.ptr< uchar >(i);
-		uchar *pt_ref = mat_ref.ptr< uchar > (i);
-		for(j = 0; j < mat.rows; j++){		
-			printf("%3d ",pt[j]);
-			//std::cout << (int) pt[j] << " ";			
-			if(!pt[j] || pt_ref[j]){
-				 pt_ref[j] = 1;
-				 continue; //pixel de cor neutra, não é referente a nenhum objeto
-			}
-			blob b;		
-			b.Area = 0;
-			b.posx = 0;
-			b.posy = 0;
-			b.maxx = 0;//std::numeric_limits<int>::max();
-			b.maxy = 0;
-			b.minx = std::numeric_limits<int>::max();
-			b.miny = std::numeric_limits<int>::max();
-			verifica(i,j,pt[j],b,mat,mat_ref);
-			blobs.push_back(b);
-		}
-		std::cout << j << std::endl;
-	}
-	std::cout << "valor de i = " << i << "valor de j = " << j << std::endl;
-	for(i = 0; i < mat.rows;i++){
-		uchar *pt_ref = mat_ref.ptr< uchar > (i);
-		for(j = 0; j < mat.cols;j++){
-			std::cout << (int)pt_ref[j] << " ";	
-		}
-		std::cout << std::endl;
-	}
-	std::cout <<"tamanho dos blobs " << blobs.size() << std::endl;
-	std::vector < blob > b = blobs;
+	
+	std::vector< std::vector<Run> > R = run(mat);
+	findBlobs(R,matRGB);
+  /*
 	sort(b.begin(),b.end(),compare);
 	for(blob &b : blobs){
 		if(b.Area < 10) continue;
 		//std::cout << b.minx << ", " << b.miny << "    " << b.maxx << ", " << b.maxy << std::endl;
-		cv::rectangle(matRGB,cv::Point(b.miny,b.minx),cv::Point(b.maxy,b.maxx),cv::Scalar(255,0,0));
-	}
+		cv::rectangle(matRGB,cv::Point(b.miny,b.minx),cv::Point(b.maxy,b.maxx),cv::Scalar(0,0,255));
+	}*/
 	//cv::rectangle(matRGB, cv::Point(1,1), cv::Point(mat.cols-1,mat.rows-1),cv::Scalar(0,0,255));
 	cv::imshow("testado e aprovado",matRGB);
-	
+	cv::imshow("mat",mat);
 	cv::waitKey(0);
 	cv::destroyAllWindows();
 	return 0;
