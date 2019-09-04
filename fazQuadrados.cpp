@@ -4,6 +4,10 @@
 #include <cstdio>
 
 
+	/*😁️🌚️
+
+	*/
+
 //int mat[size][size] = {{0,1,0},{1,1,1},{2,2,3}}; //matriz de exemplo
 
 //bool mat_ref[size][size];
@@ -57,7 +61,7 @@ bool compare(blob b1, blob b2){
 	return b1.Area > b2.Area;
 }
 
-typedef struct{
+struct Run{
      int start;
      int width;
      int areaBlob;
@@ -65,8 +69,13 @@ typedef struct{
      int parentRow;
      int sumX;
      int sumY;
+     int endx;
+     int endy;
+     int inix;
+     int iniy;
      uchar color;
-}Run;
+     Run* papai;
+};
 
 std::vector< std::vector<Run> > run(const cv::Mat &matrix){
     std::vector< std::vector<Run> > runs;
@@ -80,7 +89,7 @@ std::vector< std::vector<Run> > run(const cv::Mat &matrix){
 
         for (int j=0; j < matrix.cols; j++) {
 
-            for (runLenght = 0; runLenght + j < matrix.cols && pt[j + runLenght]!=0; runLenght++);
+            for (runLenght = 0; runLenght + j < matrix.cols && pt[j + runLenght]==pt[j]; runLenght++);
 
             Run current;
             current.start = j;
@@ -89,7 +98,12 @@ std::vector< std::vector<Run> > run(const cv::Mat &matrix){
             current.areaBlob = current.width;
             current.parent = -1;
             current.sumX = i * current.width;
-            current.sumY = current.width * ((current.width/2) + current.start);
+            current.sumY = current.width * ((current.width/2) + current.start); 
+            //current.endx = current.start+current.width;
+            //current.endy = i;
+            current.inix = j;
+            current.iniy = i;
+            current.papai = NULL;
 
             if (current.color != 0) line.push_back(current);
             j+=runLenght;
@@ -125,8 +139,33 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
                     r2.areaBlob += r1.areaBlob;
                     r2.sumX += r1.sumX;
                     r2.sumY += r1.sumY;
+                    r2.iniy = r1.iniy;
+                    //r1.endy++;
+                    r1.papai = &r2;
+                    
+                   
+                }else{
+                    r1.papai->parent = i2;
+                    r1.papai->parentRow = row; 
+                    
+                    r2.areaBlob += r1.papai->areaBlob;
+                    r2.sumX += r1.papai->sumX;
+                    r2.sumY += r1.papai->sumY;
+                    r2.iniy = r1.papai->iniy;
+                    
+                    r1.papai->papai = &r2;
                 }
-            }
+                if(r1.inix < r2.inix){
+                    r2.inix = r1.inix;
+                }
+                /*if(r1.endx < r2.endx){
+                    r1.endx = r2.endx;
+                }
+                if(r2.start < r1.start){
+                    r1.start = r2.start;
+                }*/
+                
+            } 
 
             runs[row-1][i1] = r1;
             runs[row][i2] = r2;
@@ -148,19 +187,30 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
 
         for(unsigned long j  = 0 ; j < runs[i].size() ; j++){
             r = runs[i][j];
-
+            //cv::rectangle(debugFrame, cv::Point(r.inix,r.iniy),cv::Point(r.start+r.width,i),cv::Scalar(255,255,255));
             if(r.parent == -1) {
                 cor = runs[i][j].color;
                 varBlob.posx = r.sumY / r.areaBlob;
                 varBlob.posy = r.sumX / runs[i][j].areaBlob;
-
+                varBlob.minx = r.inix;
+                varBlob.miny = r.iniy;
+                varBlob.maxx = r.start+r.width;
+                varBlob.maxy = i;
+                
                 countBlobs++;
-                cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(255,0,0),1, CV_AA);
+                //if(countBlobs < 9){
+                cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));
+                //if(r.areaBlob > 200)
+                    cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
+                    std::cout << "area = " << r.areaBlob << std::endl;
+                //}
+                
+                
             }
 
         }
     }
-    
+    std::cout << "number of blobs  = " << countBlobs << std::endl;
     runs.clear();
 }
 
@@ -168,14 +218,19 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
 int main(void){
 	cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
 	cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
+	cv::resize(mat,mat,cv::Size(50,50));
+	cv::resize(matRGB,matRGB,cv::Size(50,50));
 	cv::Mat mat_ref(mat.size(), CV_64FC1, cv::Scalar(0));
 
+  std::cout << mat << std::endl;
 
-	/*😁️
-
-	*/
 	
 	std::vector< std::vector<Run> > R = run(mat);
+	for(std::vector<Run> &rVet : R){
+	    for(Run &r:rVet){
+	        std::cout << "começo = " << r.start << " cor = " << (int) r.color << std::endl;
+	    } 
+	}
 	findBlobs(R,matRGB);
   /*
 	sort(b.begin(),b.end(),compare);
