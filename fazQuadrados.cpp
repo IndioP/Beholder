@@ -183,7 +183,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
     // turning fathers into blobs
     blob varBlob;
     Run r;
-    int countBlobs =0;
+    static int countBlobs =0;
     for(unsigned long i = 0 ; i < runs.size() ; i++){
 
         for(unsigned long j  = 0 ; j < runs[i].size() ; j++){
@@ -200,14 +200,14 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
                 
                 
                 
-                if(r.areaBlob > 700){
+                if(r.areaBlob > 500){
 					cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));
 					char name[100] = "dataSet/image";
 					char aux[150];
 					sprintf(aux,"%d",countBlobs);
 					strcat(name,aux);
 					strcat(name,".jpg");
-					cv::imwrite(name,cv::Mat(debugFrame,cv::Rect(varBlob.minx,varBlob.miny,varBlob.maxx-varBlob.minx,varBlob.maxy-varBlob.miny)));
+					cv::imwrite(name,cv::Mat(debugFrame,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny))));
                     //cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
                     //std::cout << "area = " << r.areaBlob <<" "<< varBlob.posx<<" "<<varBlob.posy << std::endl;
                     countBlobs++;
@@ -229,7 +229,7 @@ int main(void){
 	    std::cout << "Error opening video stream orddd file" << std::endl;
 	    return -1;
   	}
-  	exit(1);
+
  
 	cv::VideoCapture capGRAY("videoSubtraction_gray.avi");
 	if(!capGRAY.isOpened()){
@@ -241,23 +241,34 @@ int main(void){
   		cv::Mat matRGB;
 
   		capGRAY >> mat;
+		cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
   		capRGB >> matRGB;
   		
   		if (mat.empty())
       		break;
 
-      	std::vector< std::vector<Run> > R = run(mat);
+     	std::vector< std::vector<Run> > R = run(mat);
 	
 	
 		findBlobs(R,matRGB);
 
 		cv::imshow("testado e aprovado",matRGB);
+		cv::imshow("testado2",mat);
+		//std::cout << "chegou aqui " << std::endl;
+		cv::waitKey(100);
 
   	}
-	//cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
-	//cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
+	/*cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
+	cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
 
-	//cv::waitKey(0);
+	std::vector< std::vector<Run> > R = run(mat);
+	
+	
+	findBlobs(R,mat);
+
+	cv::imshow("testado e aprovado",matRGB);
+	cv::imshow("testado2",mat);
+	cv::waitKey(0);*/
 	capRGB.release();
 	capGRAY.release();
 	cv::destroyAllWindows();
