@@ -1,7 +1,9 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <cstring>
 #include <cstdio>
+#include "opencv2/opencv.hpp"
 
 
 	/*😁️🌚️
@@ -196,12 +198,19 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
                 varBlob.maxx = r.endx;
                 varBlob.maxy = r.endy;
                 
-                countBlobs++;
+                
                 
                 if(r.areaBlob > 700){
 					cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));
+					char name[100] = "dataSet/image";
+					char aux[150];
+					sprintf(aux,"%d",countBlobs);
+					strcat(name,aux);
+					strcat(name,".jpg");
+					cv::imwrite(name,cv::Mat(debugFrame,cv::Rect(varBlob.minx,varBlob.miny,varBlob.maxx-varBlob.minx,varBlob.maxy-varBlob.miny)));
                     //cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
-                    std::cout << "area = " << r.areaBlob <<" "<< varBlob.posx<<" "<<varBlob.posy << std::endl;
+                    //std::cout << "area = " << r.areaBlob <<" "<< varBlob.posx<<" "<<varBlob.posy << std::endl;
+                    countBlobs++;
                 }
                 
                 
@@ -215,29 +224,42 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
 
 
 int main(void){
-	cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
-	cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
-	cv::Mat matAux = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
-	
-	cv::Mat mat_ref(mat.size(), CV_64FC1, cv::Scalar(0));
+	cv::VideoCapture capRGB("videoSubtraction_rgb.avi");
+	if(!capRGB.isOpened()){
+	    std::cout << "Error opening video stream orddd file" << std::endl;
+	    return -1;
+  	}
+  	exit(1);
+ 
+	cv::VideoCapture capGRAY("videoSubtraction_gray.avi");
+	if(!capGRAY.isOpened()){
+    	std::cout << "Error opening video stream or file" << std::endl;
+    	return -1;
+  	}
+  	while(true){
+  		cv::Mat mat;
+  		cv::Mat matRGB;
 
-	for(int i = 0; i < mat.rows; i++){
-		const uchar * pt = mat.ptr<uchar>(i);
-		for(int j = 0; j < mat.cols; j++){
-			printf("%3d",(int) pt[j]);
-		}
-		std::cout << std::endl;
-	}
+  		capGRAY >> mat;
+  		capRGB >> matRGB;
+  		
+  		if (mat.empty())
+      		break;
 
+      	std::vector< std::vector<Run> > R = run(mat);
 	
-	std::vector< std::vector<Run> > R = run(mat);
 	
-	
-	findBlobs(R,matRGB);
-  
-	cv::imshow("testado e aprovado",matRGB);
-	
-	cv::waitKey(0);
+		findBlobs(R,matRGB);
+
+		cv::imshow("testado e aprovado",matRGB);
+
+  	}
+	//cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
+	//cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
+
+	//cv::waitKey(0);
+	capRGB.release();
+	capGRAY.release();
 	cv::destroyAllWindows();
 	return 0;
 }
