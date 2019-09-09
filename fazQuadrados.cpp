@@ -127,7 +127,7 @@ Run* HxH(Run *aux){
 	return aux;
 }
 
-void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original){
     uchar cor;
     int diff;
 
@@ -200,15 +200,16 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame){
                 
                 
                 
-                if(r.areaBlob > 500){
-					cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));
+                if(r.areaBlob > 700){
+					
 					char name[100] = "dataSet/image";
 					char aux[150];
 					sprintf(aux,"%d",countBlobs);
 					strcat(name,aux);
 					strcat(name,".jpg");
-					cv::imwrite(name,cv::Mat(debugFrame,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny))));
-                    //cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
+					cv::imwrite(name,cv::Mat(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny))));
+cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));               
+					     //cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
                     //std::cout << "area = " << r.areaBlob <<" "<< varBlob.posx<<" "<<varBlob.posy << std::endl;
                     countBlobs++;
                 }
@@ -243,6 +244,7 @@ int main(void){
   		capGRAY >> mat;
 		cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
   		capRGB >> matRGB;
+		cv::Mat original = matRGB;
   		
   		if (mat.empty())
       		break;
@@ -250,13 +252,16 @@ int main(void){
      	std::vector< std::vector<Run> > R = run(mat);
 	
 	
-		findBlobs(R,matRGB);
+		findBlobs(R,matRGB,original);
 
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
 		//std::cout << "chegou aqui " << std::endl;
-		cv::waitKey(100);
-
+		int k = cv::waitKey(1);
+		if(k == 27){
+			std::cout << "encerrando o programa" << std::endl;
+			break;
+		}	
   	}
 	/*cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
 	cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
