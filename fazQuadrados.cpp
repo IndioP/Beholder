@@ -5,6 +5,8 @@
 #include <cstdio>
 #include "opencv2/opencv.hpp"
 
+#define GRANULARIDADE 5
+
 
 	/*😁️🌚️
 
@@ -183,7 +185,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
     // turning fathers into blobs
     blob varBlob;
     Run r;
-    static long int countBlobs = 0;
+	 static long int countFrame = 0;
+    long int countBlobs = 0;
     for(unsigned long i = 0 ; i < runs.size() ; i++){
 
         for(unsigned long j  = 0 ; j < runs[i].size() ; j++){
@@ -206,15 +209,14 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 					sprintf(name,pasta); 
 					strcat(name,"/image");
 					char aux[150];
-					sprintf(aux,"%ld",countBlobs);
+					sprintf(aux,"%ld_%ld",countFrame,countBlobs);
 					strcat(name,aux);
 					strcat(name,".jpg");
 					cv::Mat m(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny)));
 					cv::resize(m,m,cv::Size(200,200));
 					cv::imwrite(name,m);
 cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));               
-					     //cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
-                    //std::cout << "area = " << r.areaBlob <<" "<< varBlob.posx<<" "<<varBlob.posy << std::endl;
+					     
                     countBlobs++;
                 }
                 
@@ -223,7 +225,7 @@ cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.
 
         }
     }
-    
+    countFrame++;
     runs.clear();
 }
 
@@ -250,33 +252,28 @@ int main(int argc, char *argv[]){
   	while(true){
 
 
-  		for(int i = 0; i < 5; i++){
+  		for(int i = 0; i < GRANULARIDADE; i++){
 			cap >> matRGB;
 			if (matRGB.empty())
       		break;
-			//capRGB >> matRGB;
+
 		}
 		if (matRGB.empty())
       	break;
 
 		pBackSub->apply(matRGB, mat);
 
-		cv::morphologyEx(mat, mat, cv::MORPH_OPEN,element);
-		//cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
-  		
+		cv::morphologyEx(mat, mat, cv::MORPH_OPEN,element);		
 		
 		cv::Mat original = matRGB.clone();
   		
-  
-
      	std::vector< std::vector<Run> > R = run(mat);
-	
 	
 		findBlobs(R,matRGB,original,argv[2]);
 
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
-		//std::cout << "chegou aqui " << std::endl;
+
 		int k = cv::waitKey(1);
 		if(k == 27){
 			std::cout << "encerrando o programa" << std::endl;
