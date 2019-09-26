@@ -183,7 +183,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
     // turning fathers into blobs
     blob varBlob;
     Run r;
-    static int countBlobs =0;
+    static long int countBlobs = 0;
     for(unsigned long i = 0 ; i < runs.size() ; i++){
 
         for(unsigned long j  = 0 ; j < runs[i].size() ; j++){
@@ -200,14 +200,16 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
                 
                 
                 
-                if(r.areaBlob > 700){
+               if(((varBlob.maxx - varBlob.minx) > 110) && ((varBlob.maxy - varBlob.miny) > 110)){
 					
-					char name[100] = "dataSet/image";
+					char name[100] = "dataSet2/image";
 					char aux[150];
-					sprintf(aux,"%d",countBlobs);
+					sprintf(aux,"%ld",countBlobs);
 					strcat(name,aux);
 					strcat(name,".jpg");
-					cv::imwrite(name,cv::Mat(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny))));
+					cv::Mat m(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny)));
+					cv::resize(m,m,cv::Size(200,200));
+					cv::imwrite(name,m);
 cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));               
 					     //cv::circle(debugFrame,cv::Point(varBlob.posx,varBlob.posy),5,cv::Scalar(0,0,0),1, CV_AA);
                     //std::cout << "area = " << r.areaBlob <<" "<< varBlob.posx<<" "<<varBlob.posy << std::endl;
@@ -225,14 +227,14 @@ cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.
 
 
 int main(void){
-	cv::VideoCapture capRGB("videoSubtraction_rgb.avi");
+	cv::VideoCapture capRGB("video2Subtraction_rgb.avi");
 	if(!capRGB.isOpened()){
 	    std::cout << "Error opening video stream orddd file" << std::endl;
 	    return -1;
   	}
 
  
-	cv::VideoCapture capGRAY("videoSubtraction_gray.avi");
+	cv::VideoCapture capGRAY("video2Subtraction_gray.avi");
 	if(!capGRAY.isOpened()){
     	std::cout << "Error opening video stream or file" << std::endl;
     	return -1;
@@ -241,13 +243,20 @@ int main(void){
   		cv::Mat mat;
   		cv::Mat matRGB;
 
-  		capGRAY >> mat;
-		cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
-  		capRGB >> matRGB;
-		cv::Mat original = matRGB;
-  		
-  		if (mat.empty())
+  		for(int i = 0; i < 5; i++){
+			capGRAY >> mat;
+			if (mat.empty())
       		break;
+			capRGB >> matRGB;
+		}
+		if (mat.empty())
+      	break;
+		cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
+  		
+		
+		cv::Mat original = matRGB.clone();
+  		
+  
 
      	std::vector< std::vector<Run> > R = run(mat);
 	
