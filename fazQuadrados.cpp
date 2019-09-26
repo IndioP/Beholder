@@ -127,7 +127,7 @@ Run* HxH(Run *aux){
 	return aux;
 }
 
-void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original){
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[]){
     uchar cor;
     int diff;
 
@@ -202,7 +202,9 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
                 
                if(((varBlob.maxx - varBlob.minx) > 110) && ((varBlob.maxy - varBlob.miny) > 110)){
 					
-					char name[100] = "dataSet2/image";
+					char name[100];
+					sprintf(name,pasta); 
+					strcat(name,"/image");
 					char aux[150];
 					sprintf(aux,"%ld",countBlobs);
 					strcat(name,aux);
@@ -226,32 +228,41 @@ cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.
 }
 
 
-int main(void){
-	cv::VideoCapture capRGB("video2Subtraction_rgb.avi");
-	if(!capRGB.isOpened()){
+int main(int argc, char *argv[]){
+	if(argc < 3){
+		std::cout << "passe o video e a pasta que salvaremos as imagens" << std::endl;
+		exit(1);	
+	}
+	cv::VideoCapture cap(argv[1]);
+	if(!cap.isOpened()){
 	    std::cout << "Error opening video stream orddd file" << std::endl;
 	    return -1;
   	}
+	cv::Mat mat;
+	cv::Mat matRGB;
+	cv::Ptr<cv::BackgroundSubtractor> pBackSub = cv::createBackgroundSubtractorMOG2(1,16,true);
 
- 
-	cv::VideoCapture capGRAY("video2Subtraction_gray.avi");
-	if(!capGRAY.isOpened()){
-    	std::cout << "Error opening video stream or file" << std::endl;
-    	return -1;
-  	}
+	cap >> matRGB;
+	
+	pBackSub->apply(matRGB, mat);
+	cv::Mat element = cv::getStructuringElement(0, cv::Size( 2*1 + 1, 2*1+1 ), cv::Point( 1, 1 ) );
+
   	while(true){
-  		cv::Mat mat;
-  		cv::Mat matRGB;
+
 
   		for(int i = 0; i < 5; i++){
-			capGRAY >> mat;
-			if (mat.empty())
+			cap >> matRGB;
+			if (matRGB.empty())
       		break;
-			capRGB >> matRGB;
+			//capRGB >> matRGB;
 		}
-		if (mat.empty())
+		if (matRGB.empty())
       	break;
-		cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
+
+		pBackSub->apply(matRGB, mat);
+
+		cv::morphologyEx(mat, mat, cv::MORPH_OPEN,element);
+		//cv::cvtColor(mat,mat,cv::COLOR_BGR2GRAY);
   		
 		
 		cv::Mat original = matRGB.clone();
@@ -261,7 +272,7 @@ int main(void){
      	std::vector< std::vector<Run> > R = run(mat);
 	
 	
-		findBlobs(R,matRGB,original);
+		findBlobs(R,matRGB,original,argv[2]);
 
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
@@ -283,8 +294,8 @@ int main(void){
 	cv::imshow("testado e aprovado",matRGB);
 	cv::imshow("testado2",mat);
 	cv::waitKey(0);*/
-	capRGB.release();
-	capGRAY.release();
+	cap.release();
+	//capGRAY.release();
 	cv::destroyAllWindows();
 	return 0;
 }
