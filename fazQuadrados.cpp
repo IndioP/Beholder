@@ -4,15 +4,17 @@
 #include <cstring>
 #include <cstdio>
 #include "opencv2/opencv.hpp"
+#include <deque>
+#include <math.h>
 
-#define GRANULARIDADE 5
+#define GRANULARIDADE 1
+#define MAX_ITERATIONS 10
+#define MAX_ID 10000
 
 
 	/*😁️🌚️
 
 	*/
-
-
 
 typedef struct{
 	int Area;
@@ -22,46 +24,8 @@ typedef struct{
 	int miny;
 	int maxx;
 	int maxy;
+	int key;
 }blob;
-
-void verifica(int linha, int coluna, int cor, blob &b, const cv::Mat mat, cv::Mat mat_ref){
-	if(linha < 0 || coluna < 0 || linha >= mat.rows || coluna >=mat.cols){ //indices fora da matriz
-		
-		return;	
-	}
-	uchar *pt_ref = mat_ref.ptr< uchar > (linha);
-	const uchar * pt = mat.ptr< uchar >(linha);
-	if(pt_ref[coluna]) //pixel já visitado
-		return;	
-		
-	if(pt[coluna]){
-		pt_ref[coluna] = 1; //encontrei uma região nova
-												 //Pesquisando a extensão da região encontrada
-		b.Area++;
-		b.posx = (b.posx+linha)/2;
-		b.posy = (b.posy+coluna)/2;
-		if(b.minx > linha){
-			b.minx = linha;		
-		}
-		if(b.maxx < linha){
-			b.maxx = linha;		
-		}
-		if(b.miny > coluna){
-			b.miny = coluna;		
-		}
-		if(b.maxy < coluna){
-			b.maxy = coluna;
-		}
-		verifica(linha-1,coluna,cor,b,mat,mat_ref);
-		verifica(linha+1,coluna,cor,b,mat,mat_ref);
-		verifica(linha, coluna-1,cor,b,mat,mat_ref);
-		verifica(linha,coluna+1,cor,b,mat,mat_ref);
-	}
-}
-
-bool compare(blob b1, blob b2){
-	return b1.Area > b2.Area;
-}
 
 struct Run{
      int start;
@@ -78,6 +42,10 @@ struct Run{
      uchar color;
      Run* papai;
 };
+
+std::deque< std::vector< blob > > filaBlob;
+std::deque< cv::Mat > filaImage;
+
 
 std::vector< std::vector<Run> > run(const cv::Mat &matrix){
     std::vector< std::vector<Run> > runs;
@@ -127,6 +95,19 @@ Run* HxH(Run *aux){
 	}
 	
 	return aux;
+}
+
+void salvaSubImagem(long int countFrame, int countBlobs, cv::Mat &original, char pasta[], blob varBlob){
+	char name[100];
+	strcpy(name,pasta); 
+	strcat(name,"/image");
+	char aux[150];
+	sprintf(aux,"%ld_%d",countFrame,countBlobs);
+	strcat(name,aux);
+	strcat(name,".jpg");
+	cv::Mat m(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny)));
+	cv::resize(m,m,cv::Size(200,200));
+	cv::imwrite(name,m);
 }
 
 void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[]){
@@ -185,40 +166,39 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
     // turning fathers into blobs
     blob varBlob;
     Run r;
+	 std::vector < blob > v;
 	 static long int countFrame = 0;
-    long int countBlobs = 0;
+    static int countBlobs = 0;
     for(unsigned long i = 0 ; i < runs.size() ; i++){
 
         for(unsigned long j  = 0 ; j < runs[i].size() ; j++){
             r = runs[i][j];
             
-            if(r.papai == NULL) {
+            if(r.papai == NULL) { //se não tem pai, ele é o pai
                 cor = runs[i][j].color;
-                varBlob.posx = r.sumY / r.areaBlob;
-                varBlob.posy = r.sumX / runs[i][j].areaBlob;
+
+					 if(r.areaBlob){
+	                varBlob.posx = r.sumY / r.areaBlob;
+					 }
+
+					 if(runs[i][j].areaBlob){
+					 	 varBlob.posy = r.sumX / runs[i][j].areaBlob;
+					 }
+
                 varBlob.minx = r.inix;
                 varBlob.miny = r.iniy;
                 varBlob.maxx = r.endx;
                 varBlob.maxy = r.endy;
-                
-                
+					 varBlob.key = countBlobs;     
+					          
                 
                if(((varBlob.maxx - varBlob.minx) > 110) && ((varBlob.maxy - varBlob.miny) > 110)){
 					
-					char name[100];
-					sprintf(name,pasta); 
-					strcat(name,"/image");
-					char aux[150];
-					sprintf(aux,"%ld_%ld",countFrame,countBlobs);
-					strcat(name,aux);
-					strcat(name,".jpg");
-					cv::Mat m(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny)));
-					cv::resize(m,m,cv::Size(200,200));
-					cv::imwrite(name,m);
-cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.maxx,varBlob.maxy),cv::Scalar(255,255,255));               
-					     
-                    countBlobs++;
-                }
+						
+						             
+					   v.push_back(varBlob);
+                  countBlobs++;
+               }
                 
                 
             }
@@ -226,15 +206,66 @@ cv::rectangle(debugFrame,cv::Point(varBlob.minx,varBlob.miny),cv::Point(varBlob.
         }
     }
     countFrame++;
+	 filaBlob.push_front(v);
+	 filaImage.push_front(original);
+	 if(countBlobs > MAX_ID){
+	 	 countBlobs = 0;
+	 }
+	 if(filaBlob.size() > MAX_ITERATIONS){
+	 	 filaBlob.pop_back();
+		 filaImage.back().release();
+		 filaImage.pop_back();
+	 }
+	 if(filaBlob.size() > 1){
+	 	 for(int i = 0; i < filaBlob[1].size(); i++){
+			 blob &b(filaBlob[1][i]);
+			 /*if(b.posy > 1000||b.posx > 600 || b.posx < 200 || b.posy < 200){
+				std::cout << "chegou aqui" << std::endl;
+				continue;
+			 }*/
+			 
+			 if(i >= filaBlob[0].size()){
+	 			 break;
+			 }
+			 blob &bk(filaBlob[0][i]);
+			 double distancek = sqrt(((b.posx - bk.posx)*(b.posx - bk.posx))+((b.posy - bk.posy)*(b.posy - bk.posy)));
+			 int j;
+			 for(j = i; j < filaBlob[0].size(); j++){
+				 blob &bi(filaBlob[0][j]);
+			 	 double distancei = sqrt(((b.posx-bi.posx) * (b.posx-bi.posx))+((b.posy-bi.posy) * (b.posy-bi.posy)));
+			 	 if(distancei <= distancek){
+					 std::swap(filaBlob[0][i],filaBlob[0][j]);
+					 std::swap(distancek,distancei);
+				 }
+			 }
+			 blob &bi(filaBlob[0][i]);
+		 	 double distancei = sqrt(((b.posx-bi.posx) * (b.posx-bi.posx))+((b.posy-bi.posy) * (b.posy-bi.posy)));
+			 if(distancei < 50)
+			 	bi.key = b.key; 
+
+		 }
+		 
+		 
+	 }
+	 for(int i = 0; i < filaBlob[0].size(); i++){
+		 blob &b(filaBlob[0][i]);
+		 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
+		 char nameAux[10];
+		 sprintf(nameAux,"%d",b.key);
+		 cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.8,cv::Scalar(0,0,255),2);
+ 		 //salvaSubImagem(countFrame, countBlobs, original, pasta, b);
+  
+	 }
     runs.clear();
 }
-
 
 int main(int argc, char *argv[]){
 	if(argc < 3){
 		std::cout << "passe o video e a pasta que salvaremos as imagens" << std::endl;
 		exit(1);	
 	}
+	
+	static_assert(MAX_ITERATIONS > 1,"max iterations precisa ser maior que 1");
 	cv::VideoCapture cap(argv[1]);
 	if(!cap.isOpened()){
 	    std::cout << "Error opening video stream orddd file" << std::endl;
@@ -274,7 +305,7 @@ int main(int argc, char *argv[]){
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
 
-		int k = cv::waitKey(1);
+		int k = cv::waitKey(10000);
 		if(k == 27){
 			std::cout << "encerrando o programa" << std::endl;
 			break;
@@ -291,6 +322,15 @@ int main(int argc, char *argv[]){
 	cv::imshow("testado e aprovado",matRGB);
 	cv::imshow("testado2",mat);
 	cv::waitKey(0);*/
+
+	for(std::vector < blob > &v : filaBlob){
+		v.clear();	
+	}	
+	filaBlob.clear();
+	for(cv::Mat &m : filaImage){
+		m.release();	
+	}
+	filaImage.clear();
 	cap.release();
 	//capGRAY.release();
 	cv::destroyAllWindows();
