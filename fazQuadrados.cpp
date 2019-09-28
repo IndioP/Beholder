@@ -6,10 +6,12 @@
 #include "opencv2/opencv.hpp"
 #include <deque>
 #include <math.h>
+#include <chrono>
 
-#define GRANULARIDADE 1
+#define GRANULARIDADE 5	
 #define MAX_ITERATIONS 10
 #define MAX_ID 10000
+#define DISTANCIA 100
 
 
 	/*😁️🌚️
@@ -208,6 +210,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
     countFrame++;
 	 filaBlob.push_front(v);
 	 filaImage.push_front(original);
+	 static std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	 if(countBlobs > MAX_ID){
 	 	 countBlobs = 0;
 	 }
@@ -240,8 +243,14 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 			 }
 			 blob &bi(filaBlob[0][i]);
 		 	 double distancei = sqrt(((b.posx-bi.posx) * (b.posx-bi.posx))+((b.posy-bi.posy) * (b.posy-bi.posy)));
-			 if(distancei < 50)
-			 	bi.key = b.key; 
+			 if(distancei < DISTANCIA){
+			 	bi.key = b.key;
+				std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+		 		float elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
+			 	if(elapsedTime)
+		 		std::cout << "velocidade = " << (bi.posx - b.posx)*1000/elapsedTime <<" , " << (bi.posy - b.posy)*1000/elapsedTime << std::endl;
+				t1 = t2; 
+			 }
 
 		 }
 		 
@@ -253,7 +262,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 		 char nameAux[10];
 		 sprintf(nameAux,"%d",b.key);
 		 cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.8,cv::Scalar(0,0,255),2);
- 		 //salvaSubImagem(countFrame, countBlobs, original, pasta, b);
+ 		 //salvaSubImagem(countFrame, b.key, original, pasta, b);
+		 
   
 	 }
     runs.clear();
@@ -305,7 +315,7 @@ int main(int argc, char *argv[]){
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
 
-		int k = cv::waitKey(10000);
+		int k = cv::waitKey(1);
 		if(k == 27){
 			std::cout << "encerrando o programa" << std::endl;
 			break;
