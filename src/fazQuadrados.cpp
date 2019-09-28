@@ -7,6 +7,7 @@
 #include <deque>
 #include <math.h>
 #include <chrono>
+#include "Histogram.h"
 
 #define GRANULARIDADE 5	
 #define MAX_ITERATIONS 10
@@ -112,7 +113,7 @@ void salvaSubImagem(long int countFrame, int countBlobs, cv::Mat &original, char
 	cv::imwrite(name,m);
 }
 
-void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[]){
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram &histPosX, Histogram &histPosY){
     uchar cor;
     int diff;
 
@@ -215,18 +216,20 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 	 countBlobs = 0;
 	 }
 	 if(filaBlob.size() > MAX_ITERATIONS){
-	 	 filaBlob.pop_back();
+	    for(blob &b : filaBlob.back()){
+ 	 	 	 histPosX.removeHist(b.posx);
+		 	 histPosY.removeHist(b.posy);
+		 }
+
+		 filaBlob.pop_back();
 		 filaImage.back().release();
 		 filaImage.pop_back();
+		 
 	 }
 	 if(filaBlob.size() > 1){
 	 	 for(int i = 0; i < filaBlob[1].size(); i++){
 			 blob &b(filaBlob[1][i]);
-			 /*if(b.posy > 1000||b.posx > 600 || b.posx < 200 || b.posy < 200){
-				std::cout << "chegou aqui" << std::endl;
-				continue;
-			 }*/
-			 
+			 		 
 			 if(i >= filaBlob[0].size()){
 	 			 break;
 			 }
@@ -258,6 +261,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 }
 	 for(int i = 0; i < filaBlob[0].size(); i++){
 		 blob &b(filaBlob[0][i]);
+		 histPosX.insertHist(b.posx);
+		 histPosY.insertHist(b.posy);
 		 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
 		 char nameAux[10];
 		 sprintf(nameAux,"%d",b.key);
@@ -289,6 +294,10 @@ int main(int argc, char *argv[]){
 	
 	pBackSub->apply(matRGB, mat);
 	cv::Mat element = cv::getStructuringElement(0, cv::Size( 2*1 + 1, 2*1+1 ), cv::Point( 1, 1 ) );
+	Histogram histPosX(matRGB.rows,50);
+	Histogram histPosY(matRGB.cols,50);
+	
+	
 
   	while(true){
 
@@ -310,10 +319,12 @@ int main(int argc, char *argv[]){
   		
      	std::vector< std::vector<Run> > R = run(mat);
 	
-		findBlobs(R,matRGB,original,argv[2]);
+		findBlobs(R,matRGB,original,argv[2], histPosX, histPosY);
 
 		cv::imshow("testado e aprovado",matRGB);
-		cv::imshow("testado2",mat);
+		//cv::imshow("testado2",mat);
+		cv::imshow("posx",histPosX.debug());
+		cv::imshow("histPosY",histPosY.debug());
 
 		int k = cv::waitKey(1);
 		if(k == 27){
@@ -321,17 +332,7 @@ int main(int argc, char *argv[]){
 			break;
 		}	
   	}
-	/*cv::Mat mat = cv::imread("subtraction_gray.png", CV_LOAD_IMAGE_GRAYSCALE);
-	cv::Mat matRGB = cv::imread("subtraction_rgb.png", CV_LOAD_IMAGE_COLOR);
-
-	std::vector< std::vector<Run> > R = run(mat);
 	
-	
-	findBlobs(R,mat);
-
-	cv::imshow("testado e aprovado",matRGB);
-	cv::imshow("testado2",mat);
-	cv::waitKey(0);*/
 
 	for(std::vector < blob > &v : filaBlob){
 		v.clear();	
@@ -342,7 +343,6 @@ int main(int argc, char *argv[]){
 	}
 	filaImage.clear();
 	cap.release();
-	//capGRAY.release();
 	cv::destroyAllWindows();
 	return 0;
 }
