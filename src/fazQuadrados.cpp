@@ -10,7 +10,7 @@
 #include "Histogram.h"
 
 #define GRANULARIDADE 5	
-#define MAX_ITERATIONS 10
+#define MAX_ITERATIONS 100
 #define MAX_ID 10000
 #define DISTANCIA 100
 
@@ -18,6 +18,8 @@
 	/*😁️🌚️
 
 	*/
+
+int contaVerificados = 0;
 
 typedef struct{
 	int Area;
@@ -28,6 +30,9 @@ typedef struct{
 	int maxx;
 	int maxy;
 	int key;
+	bool verificado;
+	double velocidadex;
+	double velocidadey;
 }blob;
 
 struct Run{
@@ -113,15 +118,11 @@ void salvaSubImagem(long int countFrame, int countBlobs, cv::Mat &original, char
 	cv::imwrite(name,m);
 }
 
-void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram &histPosX, Histogram &histPosY){
-    uchar cor;
-    int diff;
-
-    Run *r1, *r2;
-    unsigned long i1, i2; //indexes for first and second row
-
-    // union find
-    for(unsigned long row = 1 ; row < runs.size() ; row++){
+void unionFind(std::vector< std::vector<Run> > &runs){
+	int diff;
+	Run *r1, *r2;
+   unsigned long i1, i2; //indexes for first and second row
+	for(unsigned long row = 1 ; row < runs.size() ; row++){
         i1=0, i2=0;
 
         while(i2 < runs[row].size() && i1 < runs[row-1].size()) {
@@ -166,6 +167,14 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
     }
 
+}
+
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram &histPosX, Histogram &histPosY, Histogram &histNegX, Histogram &histNegY, Histogram &histVelX, Histogram &histVelY){
+    uchar cor;
+   
+    // union find
+	 unionFind(runs);
+
     // turning fathers into blobs
     blob varBlob;
     Run r;
@@ -193,9 +202,10 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
                 varBlob.maxx = r.endx;
                 varBlob.maxy = r.endy;
 					 varBlob.key = countBlobs;     
+					 varBlob.verificado = false;
 					          
                 
-               if(((varBlob.maxx - varBlob.minx) > 110) && ((varBlob.maxy - varBlob.miny) > 110)){
+               if(((varBlob.maxx - varBlob.minx) > 50) && ((varBlob.maxy - varBlob.miny) > 50)){
 					
 						
 						             
@@ -207,6 +217,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
             }
 
         }
+		  runs[i].clear();
     }
     countFrame++;
 	 filaBlob.push_front(v);
@@ -216,9 +227,27 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 	 countBlobs = 0;
 	 }
 	 if(filaBlob.size() > MAX_ITERATIONS){
-	    for(blob &b : filaBlob.back()){
- 	 	 	 histPosX.removeHist(b.posx);
-		 	 histPosY.removeHist(b.posy);
+	    if(contaVerificados > MAX_ITERATIONS && filaBlob[0].size()){
+			 for(blob &b : filaBlob.back()){
+				 if(b.verificado){
+ 	 	 	 	
+
+					if(b.velocidadex > 0){
+				 		histPosX.removeHist(b.posx);
+					}else{
+						histNegX.removeHist(b.posx);
+					}
+	
+					if(b.velocidadey > 0){
+			 	 		histPosY.removeHist(b.posy);
+					}else{
+						histNegY.removeHist(b.posy);
+					}
+					histVelX.removeHist(fabs(b.velocidadex));
+					histVelY.removeHist(fabs(b.velocidadey));
+				 }
+			 }
+			contaVerificados--;
 		 }
 
 		 filaBlob.pop_back();
@@ -247,11 +276,33 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 			 blob &bi(filaBlob[0][i]);
 		 	 double distancei = sqrt(((b.posx-bi.posx) * (b.posx-bi.posx))+((b.posy-bi.posy) * (b.posy-bi.posy)));
 			 if(distancei < DISTANCIA){
+				
+
+
 			 	bi.key = b.key;
+				bi.verificado = true;	
 				std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 		 		float elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
-			 	if(elapsedTime)
-		 		std::cout << "velocidade = " << (bi.posx - b.posx)*1000/elapsedTime <<" , " << (bi.posy - b.posy)*1000/elapsedTime << std::endl;
+			 	if(elapsedTime){
+					contaVerificados++;
+					bi.velocidadex = (bi.posx - b.posx)*1000/elapsedTime;
+				  	if(bi.velocidadex > 0){
+				 		histPosX.insertHist(bi.posx);
+					}else{
+						histNegX.insertHist(bi.posx);
+					}
+					bi.velocidadey = (bi.posy - b.posy)*1000/elapsedTime;
+					if(bi.velocidadey > 0){
+				 		histPosY.insertHist(bi.posy);				 	
+					}else{
+						histNegY.insertHist(bi.posy);
+					}
+					histVelX.insertHist(fabs(bi.velocidadex));
+					histVelY.insertHist(fabs(bi.velocidadey));
+					//std::cout << bi.velocidadex <<" , " << bi.velocidadey << std::endl;
+				}else{
+					bi.verificado = false;				
+				}
 				t1 = t2; 
 			 }
 
@@ -261,8 +312,6 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 }
 	 for(int i = 0; i < filaBlob[0].size(); i++){
 		 blob &b(filaBlob[0][i]);
-		 histPosX.insertHist(b.posx);
-		 histPosY.insertHist(b.posy);
 		 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
 		 char nameAux[10];
 		 sprintf(nameAux,"%d",b.key);
@@ -272,6 +321,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
   
 	 }
     runs.clear();
+	
+	 
 }
 
 int main(int argc, char *argv[]){
@@ -294,8 +345,12 @@ int main(int argc, char *argv[]){
 	
 	pBackSub->apply(matRGB, mat);
 	cv::Mat element = cv::getStructuringElement(0, cv::Size( 2*1 + 1, 2*1+1 ), cv::Point( 1, 1 ) );
-	Histogram histPosX(matRGB.rows,50);
+	Histogram histPosX(matRGB.cols,50);
 	Histogram histPosY(matRGB.cols,50);
+	Histogram histNegX(matRGB.cols,50);
+	Histogram histNegY(matRGB.cols,50);
+	Histogram histVelX(matRGB.cols*2,50);
+	Histogram histVelY(matRGB.cols*2,50);
 	
 	
 
@@ -319,12 +374,16 @@ int main(int argc, char *argv[]){
   		
      	std::vector< std::vector<Run> > R = run(mat);
 	
-		findBlobs(R,matRGB,original,argv[2], histPosX, histPosY);
+		findBlobs(R,matRGB,original,argv[2], histPosX, histPosY, histNegX, histNegY, histVelX, histVelY);
 
 		cv::imshow("testado e aprovado",matRGB);
-		//cv::imshow("testado2",mat);
-		cv::imshow("posx",histPosX.debug());
+		cv::imshow("testado2",mat);
+		cv::imshow("histPosX",histPosX.debug());
 		cv::imshow("histPosY",histPosY.debug());
+		cv::imshow("histNegX",histNegX.debug());
+		cv::imshow("histNegY",histNegY.debug());
+		cv::imshow("velocidadeX",histVelX.debug());
+		cv::imshow("VelocidadeY",histVelY.debug());
 
 		int k = cv::waitKey(1);
 		if(k == 27){

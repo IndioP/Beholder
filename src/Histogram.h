@@ -16,4 +16,5 @@ class Histogram{
 		int tamanho;
 		int passo;
 
+
 };
