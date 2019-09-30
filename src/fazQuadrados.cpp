@@ -10,7 +10,7 @@
 #include "Histogram.h"
 
 #define GRANULARIDADE 5	
-#define MAX_ITERATIONS 100
+#define MAX_ITERATIONS 150
 #define MAX_ID 10000
 #define DISTANCIA 100
 

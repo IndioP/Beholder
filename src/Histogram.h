@@ -15,6 +15,7 @@ class Histogram{
 		int *hist;
 		int tamanho;
 		int passo;
+		long int acumulador;
 
 
 };

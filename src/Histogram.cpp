@@ -11,6 +11,7 @@ Histogram::~Histogram(){
 }
 
 Histogram::Histogram(int t_tamanho,int t_passo){
+	acumulador = 0;
 	tamanho = (int)t_tamanho/t_passo;
 	passo = t_passo;
 	hist = (int*) malloc(tamanho*sizeof(int));
@@ -29,6 +30,7 @@ void Histogram::insertHist(int num){
 	}
 	int aux = num/passo;
 	hist[aux]++;
+	acumulador++;
 }
 
 void Histogram::removeHist(int num){
@@ -38,14 +40,19 @@ void Histogram::removeHist(int num){
 	}
 	int aux = num/passo;
 	hist[aux]--;
+	acumulador--;
 }
 
 cv::Mat Histogram::debug(){
 	
-	cv::Mat image = cv::Mat::zeros(cv::Size(DBG,DBGY*60), CV_64FC1);
-	
+	cv::Mat image = cv::Mat::zeros(cv::Size(DBG,DBGY*60), CV_64FC3);
+	double media = acumulador / tamanho;
 	for(int i = 0; i < tamanho;i++){
-		cv::rectangle(image,cv::Point((int)((i*DBG/tamanho)),(0*DBGY)+(DBGY*50)),cv::Point((int)((i+1)*DBG/tamanho),((DBGY*50)- hist[i]*DBGY)),cv::Scalar(255,0,255));
+		if(hist[i] < media){
+			cv::rectangle(image,cv::Point((int)((i*DBG/tamanho)),(0*DBGY)+(DBGY*50)),cv::Point((int)((i+1)*DBG/tamanho),((DBGY*50)- hist[i]*DBGY)),cv::Scalar(0,0,255));
+		}else{
+			cv::rectangle(image,cv::Point((int)((i*DBG/tamanho)),(0*DBGY)+(DBGY*50)),cv::Point((int)((i+1)*DBG/tamanho),((DBGY*50)- hist[i]*DBGY)),cv::Scalar(0,255,0));
+		}
 		char nameAux[50];
 		sprintf(nameAux,"%d",i*tamanho);
 		//terminar de colocar o texto
