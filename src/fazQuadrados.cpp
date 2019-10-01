@@ -8,9 +8,10 @@
 #include <math.h>
 #include <chrono>
 #include "Histogram.h"
+#include "Histogram2D.h"
 
 #define GRANULARIDADE 5	
-#define MAX_ITERATIONS 150
+#define MAX_ITERATIONS 500
 #define MAX_ID 10000
 #define DISTANCIA 100
 
@@ -169,7 +170,7 @@ void unionFind(std::vector< std::vector<Run> > &runs){
 
 }
 
-void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram &histPosX, Histogram &histPosY, Histogram &histNegX, Histogram &histNegY, Histogram &histVelX, Histogram &histVelY){
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram2D &histPos1, Histogram2D &histPos2, Histogram2D &histPos3, Histogram2D &histPos4, Histogram &histVelX, Histogram &histVelY){
     uchar cor;
    
     // union find
@@ -230,18 +231,14 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	    if(contaVerificados > MAX_ITERATIONS && filaBlob[0].size()){
 			 for(blob &b : filaBlob.back()){
 				 if(b.verificado){
- 	 	 	 	
-
-					if(b.velocidadex > 0){
-				 		histPosX.removeHist(b.posx);
+					if((b.velocidadex > 0) && (b.velocidadey > 0)){
+				 		histPos1.removeHist(b.posx,b.posy);
+					}else if((b.velocidadex > 0) &&(b.velocidadey < 0)){
+						histPos2.removeHist(b.posx,b.posy);
+					}else if((b.velocidadex < 0) &&(b.velocidadey < 0)){
+						histPos3.removeHist(b.posx,b.posy);
 					}else{
-						histNegX.removeHist(b.posx);
-					}
-	
-					if(b.velocidadey > 0){
-			 	 		histPosY.removeHist(b.posy);
-					}else{
-						histNegY.removeHist(b.posy);
+						histPos4.removeHist(b.posx,b.posy);					
 					}
 					histVelX.removeHist(fabs(b.velocidadex));
 					histVelY.removeHist(fabs(b.velocidadey));
@@ -286,16 +283,15 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 			 	if(elapsedTime){
 					contaVerificados++;
 					bi.velocidadex = (bi.posx - b.posx)*1000/elapsedTime;
-				  	if(bi.velocidadex > 0){
-				 		histPosX.insertHist(bi.posx);
-					}else{
-						histNegX.insertHist(bi.posx);
-					}
 					bi.velocidadey = (bi.posy - b.posy)*1000/elapsedTime;
-					if(bi.velocidadey > 0){
-				 		histPosY.insertHist(bi.posy);				 	
+					if((b.velocidadex > 0) && (b.velocidadey > 0)){
+				 		histPos1.insertHist(b.posx,b.posy);
+					}else if((b.velocidadex > 0) &&(b.velocidadey < 0)){
+						histPos2.insertHist(b.posx,b.posy);
+					}else if((b.velocidadex < 0) &&(b.velocidadey < 0)){
+						histPos3.insertHist(b.posx,b.posy);
 					}else{
-						histNegY.insertHist(bi.posy);
+						histPos4.insertHist(b.posx,b.posy);					
 					}
 					histVelX.insertHist(fabs(bi.velocidadex));
 					histVelY.insertHist(fabs(bi.velocidadey));
@@ -345,10 +341,10 @@ int main(int argc, char *argv[]){
 	
 	pBackSub->apply(matRGB, mat);
 	cv::Mat element = cv::getStructuringElement(0, cv::Size( 2*1 + 1, 2*1+1 ), cv::Point( 1, 1 ) );
-	Histogram histPosX(matRGB.cols,50);
-	Histogram histPosY(matRGB.cols,50);
-	Histogram histNegX(matRGB.cols,50);
-	Histogram histNegY(matRGB.cols,50);
+	Histogram2D histPos1(matRGB.cols,100,matRGB.rows,100);
+	Histogram2D histPos2(matRGB.cols,100,matRGB.rows,100);
+	Histogram2D histPos3(matRGB.cols,100,matRGB.rows,100);
+	Histogram2D histPos4(matRGB.cols,100,matRGB.rows,100);
 	Histogram histVelX(matRGB.cols*2,50);
 	Histogram histVelY(matRGB.cols*2,50);
 	
@@ -374,14 +370,14 @@ int main(int argc, char *argv[]){
   		
      	std::vector< std::vector<Run> > R = run(mat);
 	
-		findBlobs(R,matRGB,original,argv[2], histPosX, histPosY, histNegX, histNegY, histVelX, histVelY);
+		findBlobs(R,matRGB,original,argv[2], histPos1, histPos2, histPos3, histPos4, histVelX, histVelY);
 
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
-		cv::imshow("histPosX",histPosX.debug());
-		cv::imshow("histPosY",histPosY.debug());
-		cv::imshow("histNegX",histNegX.debug());
-		cv::imshow("histNegY",histNegY.debug());
+		cv::imshow("Pos1",histPos1.debug());
+		cv::imshow("Pos2",histPos2.debug());
+		cv::imshow("Pos3",histPos3.debug());
+		cv::imshow("Pos4",histPos4.debug());
 		cv::imshow("velocidadeX",histVelX.debug());
 		cv::imshow("VelocidadeY",histVelY.debug());
 
