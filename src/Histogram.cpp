@@ -31,9 +31,10 @@ bool Histogram::insertHist(float num){
 		std::cout << "entrada invalida" << std::endl;
 		return false;	
 	}
+	float media = acumulador/tamanho;
 	hist[aux]++;
 	acumulador++;
-	return true;
+	return hist[aux] > media;
 }
 
 void Histogram::removeHist(float num){
