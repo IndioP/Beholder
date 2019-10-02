@@ -7,7 +7,7 @@
 
 class Histogram2D{
 	public:
-		void insertHist(int numx, int numY);
+		bool insertHist(int numx, int numY);
 		void removeHist(int numX, int numY);
 		Histogram2D(int t_maxX, int t_passoX,int t_maxY, int t_passoY);
 		cv::Mat debug();

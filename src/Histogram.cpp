@@ -11,6 +11,7 @@ Histogram::~Histogram(){
 }
 
 Histogram::Histogram(int t_tamanho,int t_passo){
+	max = t_tamanho;
 	acumulador = 0;
 	tamanho = (int)t_tamanho/t_passo;
 	passo = t_passo;
@@ -23,22 +24,25 @@ Histogram::Histogram(int t_tamanho,int t_passo){
 	
 }
 
-void Histogram::insertHist(int num){
-	if(num > tamanho * passo){
-		std::cout << "saida invalida" << std::endl;
-		return;	
+bool Histogram::insertHist(float num){
+
+	int aux = ((int) num)/passo;
+	if(aux >= tamanho-1){
+		std::cout << "entrada invalida" << std::endl;
+		return false;	
 	}
-	int aux = num/passo;
 	hist[aux]++;
 	acumulador++;
+	return true;
 }
 
-void Histogram::removeHist(int num){
-	if(num > tamanho *passo){
-		std::cout << "entrada invalida" << std::endl;		
+void Histogram::removeHist(float num){
+
+	int aux = ((int) num)/passo;
+	if(aux >= tamanho-1){
+		std::cout << "entrada invalida" << std::endl;
 		return;	
 	}
-	int aux = num/passo;
 	hist[aux]--;
 	acumulador--;
 }

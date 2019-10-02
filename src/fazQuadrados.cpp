@@ -32,8 +32,8 @@ typedef struct{
 	int maxy;
 	int key;
 	bool verificado;
-	double velocidadex;
-	double velocidadey;
+	float velocidadex;
+	float velocidadey;
 }blob;
 
 struct Run{
@@ -170,7 +170,7 @@ void unionFind(std::vector< std::vector<Run> > &runs){
 
 }
 
-void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram2D &histPos1, Histogram2D &histPos2, Histogram2D &histPos3, Histogram2D &histPos4, Histogram &histVelX, Histogram &histVelY){
+void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram2D &histPos1, Histogram2D &histPos2, Histogram2D &histPos3, Histogram2D &histPos4, Histogram &histVel/*X, Histogram &histVelY*/){
     uchar cor;
    
     // union find
@@ -240,8 +240,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 					}else{
 						histPos4.removeHist(b.posx,b.posy);					
 					}
-					histVelX.removeHist(fabs(b.velocidadex));
-					histVelY.removeHist(fabs(b.velocidadey));
+					histVel.removeHist(sqrt((b.velocidadex*b.velocidadex)+(b.velocidadey*b.velocidadey)));
+					//histVelY.removeHist(fabs(b.velocidadey));
 				 }
 			 }
 			contaVerificados--;
@@ -285,16 +285,52 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 					bi.velocidadex = (bi.posx - b.posx)*1000/elapsedTime;
 					bi.velocidadey = (bi.posy - b.posy)*1000/elapsedTime;
 					if((b.velocidadex > 0) && (b.velocidadey > 0)){
-				 		histPos1.insertHist(b.posx,b.posy);
+				 		if(histPos1.insertHist(b.posx,b.posy)){
+							std::cout << "Quad1 dirigindo na mão correta " << std::endl;
+							 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																cv::Point(b.maxx,b.maxy),cv::Scalar(0,255,0));						
+						}else{
+							std::cout << "Quad1 dirigindo na contra mão " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																		cv::Point(b.maxx,b.maxy),cv::Scalar(0,0,255));							
+						}
 					}else if((b.velocidadex > 0) &&(b.velocidadey < 0)){
-						histPos2.insertHist(b.posx,b.posy);
+						if(histPos2.insertHist(b.posx,b.posy)){
+							std::cout << "Quad2 dirigindo na mão correta " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																cv::Point(b.maxx,b.maxy),cv::Scalar(0,255,0));						
+						}else{
+							std::cout << "Quad2 dirigindo na contra mão " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																		cv::Point(b.maxx,b.maxy),cv::Scalar(0,0,255));							
+						}
 					}else if((b.velocidadex < 0) &&(b.velocidadey < 0)){
-						histPos3.insertHist(b.posx,b.posy);
+						if(histPos3.insertHist(b.posx,b.posy)){
+							std::cout << "Quad3 dirigindo na mão correta " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																cv::Point(b.maxx,b.maxy),cv::Scalar(0,255,0));						
+						}else{
+							std::cout << "Quad3 dirigindo na contra mão " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																		cv::Point(b.maxx,b.maxy),cv::Scalar(0,0,255));							
+						}
 					}else{
-						histPos4.insertHist(b.posx,b.posy);					
+						if(histPos4.insertHist(b.posx,b.posy)){
+							std::cout << "Quad4 dirigindo na mão correta " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																cv::Point(b.maxx,b.maxy),cv::Scalar(0,255,0));						
+						}else{
+							std::cout << "Quad4 dirigindo na contra mão " << std::endl;
+							cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),
+																		cv::Point(b.maxx,b.maxy),cv::Scalar(0,0,255));							
+						}					
 					}
-					histVelX.insertHist(fabs(bi.velocidadex));
-					histVelY.insertHist(fabs(bi.velocidadey));
+					if(histVel.insertHist(sqrt((b.velocidadex*b.velocidadex)+(b.velocidadey*b.velocidadey)))){
+						cv::circle(debugFrame,cv::Point(b.posx,b.posy),10,cv::Scalar(0,255,0),-5);					
+					}else{
+						cv::circle(debugFrame,cv::Point(b.posx,b.posy),10,cv::Scalar(0,0,255),-5);
+					}
+					//histVelY.insertHist(fabs(bi.velocidadey));
 					//std::cout << bi.velocidadex <<" , " << bi.velocidadey << std::endl;
 				}else{
 					bi.verificado = false;				
@@ -308,7 +344,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 }
 	 for(int i = 0; i < filaBlob[0].size(); i++){
 		 blob &b(filaBlob[0][i]);
-		 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
+//		 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
 		 char nameAux[10];
 		 sprintf(nameAux,"%d",b.key);
 		 cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.8,cv::Scalar(0,0,255),2);
@@ -345,8 +381,8 @@ int main(int argc, char *argv[]){
 	Histogram2D histPos2(matRGB.cols,100,matRGB.rows,100);
 	Histogram2D histPos3(matRGB.cols,100,matRGB.rows,100);
 	Histogram2D histPos4(matRGB.cols,100,matRGB.rows,100);
-	Histogram histVelX(matRGB.cols*2,50);
-	Histogram histVelY(matRGB.cols*2,50);
+	Histogram histVel(matRGB.cols*2,50);
+	//Histogram histVelY(matRGB.cols*2,50);
 	
 	
 
@@ -370,7 +406,7 @@ int main(int argc, char *argv[]){
   		
      	std::vector< std::vector<Run> > R = run(mat);
 	
-		findBlobs(R,matRGB,original,argv[2], histPos1, histPos2, histPos3, histPos4, histVelX, histVelY);
+		findBlobs(R,matRGB,original,argv[2], histPos1, histPos2, histPos3, histPos4, histVel/*X, histVelY*/);
 
 		cv::imshow("testado e aprovado",matRGB);
 		cv::imshow("testado2",mat);
@@ -378,8 +414,8 @@ int main(int argc, char *argv[]){
 		cv::imshow("Pos2",histPos2.debug());
 		cv::imshow("Pos3",histPos3.debug());
 		cv::imshow("Pos4",histPos4.debug());
-		cv::imshow("velocidadeX",histVelX.debug());
-		cv::imshow("VelocidadeY",histVelY.debug());
+		cv::imshow("velocidade",histVel.debug());
+		//cv::imshow("VelocidadeY",histVelY.debug());
 
 		int k = cv::waitKey(1);
 		if(k == 27){

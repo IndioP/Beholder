@@ -38,15 +38,18 @@ Histogram2D::Histogram2D(int t_maxX,int t_passoX, int t_maxY, int t_passoY){
 
 }
 
-void Histogram2D::insertHist(int numX, int numY){
+bool Histogram2D::insertHist(int numX, int numY){
 	int auxX = numX/passoX;
 	int auxY = numY/passoY;
 	if(auxX >= tamanhoX|| auxY >= tamanhoY){
 		std::cout <<" vai dar errado " << std::endl;	
-		return;	
+		return false;	
 	}
 	hist[auxX][auxY]++;
+	
 	acumulador++;
+	double media = acumulador/(tamanhoX*tamanhoY);
+	return hist[auxX][auxY] > media;
 }
 
 void Histogram2D::removeHist(int numX, int numY){
@@ -68,14 +71,14 @@ cv::Mat Histogram2D::debug(){
 	for(i = 0; i < tamanhoX; i++){
 		for(j = 0; j < tamanhoY; j++){
 			if(hist[i][j] < media){
-				//cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,0,255),CV_FILLED);
+				cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,0,255),CV_FILLED);
 			}else{
-				//cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,255,0),CV_FILLED);
+				cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,255,0),CV_FILLED);
 			}
-			cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(hist[i][j]*2),CV_FILLED); //cuidado com esse parametro do Scalar
+			//cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(hist[i][j]*2),CV_FILLED); //cuidado com esse parametro do Scalar
 		}
 	}
-	cv::applyColorMap(image, image, cv::COLORMAP_JET);
+	//cv::applyColorMap(image, image, cv::COLORMAP_JET);
 	/*
 	for(int i = 0; i < tamanho;i++){
 		if(hist[i] < media){

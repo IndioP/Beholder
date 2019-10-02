@@ -5,8 +5,8 @@
 
 class Histogram{
 	public:
-		void insertHist(int num);
-		void removeHist(int num);
+		bool insertHist(float num);
+		void removeHist(float num);
 		Histogram(int t_tamanho, int t_passo);
 		cv::Mat debug();
 		~Histogram();
@@ -15,6 +15,7 @@ class Histogram{
 		int *hist;
 		int tamanho;
 		int passo;
+		int max;
 		long int acumulador;
 
 
