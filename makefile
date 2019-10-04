@@ -9,7 +9,7 @@ OBJ_DIR = obj
 SRC = $(wildcard $(SRC_DIR)/*.cpp)
 OBJ = $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
-CPPFLAGS += 
+CPPFLAGS += -std=c++11
 CFLAGS += -Wall
 LDFLAGS += -Llib
 LDLIBS += `pkg-config --cflags --libs opencv`
