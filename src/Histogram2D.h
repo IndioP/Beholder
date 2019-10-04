@@ -22,6 +22,8 @@ class Histogram2D{
 		int tamanhoY;
 		int passoY;
 		long int acumulador;
+		
+		bool getSurroundings(int i, int j, double media);
 
 
 };

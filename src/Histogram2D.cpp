@@ -63,6 +63,31 @@ void Histogram2D::removeHist(int numX, int numY){
 	acumulador--;
 }
 
+bool Histogram2D::getSurroundings(int i, int j, double media){
+	bool aux = false;
+	if(i > 0){
+		if(hist[i-1][j] > media){
+			aux = true;
+		}
+	}
+	if(i < tamanhoX-1){
+		if(hist[i+1][j] > media){
+			aux = true;
+		}
+	}
+	if(j > 0){
+		if(hist[i][j-1] > media){
+			aux = true;		
+		}	
+	}
+	if(j < tamanhoY-1){
+		if(hist[i][j+1] > media){
+			aux = true;		
+		}
+	}
+	return aux;
+}
+
 cv::Mat Histogram2D::debug(){
 	
 	cv::Mat image = cv::Mat::zeros(cv::Size(DBG,DBG), CV_8UC3);
@@ -71,9 +96,16 @@ cv::Mat Histogram2D::debug(){
 	for(i = 0; i < tamanhoX; i++){
 		for(j = 0; j < tamanhoY; j++){
 			if(hist[i][j] < media){
-				cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,0,255),CV_FILLED);
+				if(getSurroundings(i, j, media)){
+					cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,255,255),CV_FILLED);
+				}else{
+					cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,0,255),CV_FILLED);
+				}
 			}else{
-				cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,255,0),CV_FILLED);
+
+    				cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(0,255,0),CV_FILLED);
+				
+				
 			}
 			//cv::rectangle(image, cv::Point((int)(i*DBG/tamanhoX),j*DBG/tamanhoY),cv::Point((int)((i+1)*DBG/tamanhoX),(j+1)*DBG/tamanhoY),cv::Scalar(hist[i][j]*2),CV_FILLED); //cuidado com esse parametro do Scalar
 		}

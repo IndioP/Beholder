@@ -10,7 +10,7 @@
 #include "Histogram.h"
 #include "Histogram2D.h"
 
-#define GRANULARIDADE 1	
+#define GRANULARIDADE 5	
 #define MAX_ITERATIONS 500
 #define MAX_ID 10000
 #define DISTANCIA 100
@@ -460,13 +460,13 @@ int main(int argc, char *argv[]){
 		findBlobs(R,matRGB,original,argv[2], histPos1, histPos2, histPos3, histPos4, histVel, histAcc);
 
 		cv::imshow("testado e aprovado",matRGB);
-		/*cv::imshow("testado2",mat);
+		cv::imshow("testado2",mat);
 		cv::imshow("Pos1",histPos1.debug());
 		cv::imshow("Pos2",histPos2.debug());
 		cv::imshow("Pos3",histPos3.debug());
 		cv::imshow("Pos4",histPos4.debug());
 		cv::imshow("Velocidade",histVel.debug());
-		cv::imshow("Aceleração",histAcc.debug());*/
+		cv::imshow("Aceleração",histAcc.debug());
 
 		int k = cv::waitKey(1);
 		if(k == 27){
