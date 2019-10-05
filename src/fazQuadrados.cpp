@@ -10,7 +10,7 @@
 #include "Histogram.h"
 #include "Histogram2D.h"
 
-#define GRANULARIDADE 5	
+#define GRANULARIDADE 2	
 #define MAX_ITERATIONS 500
 #define MAX_ID 10000
 #define DISTANCIA 100
@@ -37,6 +37,11 @@ typedef struct{
 	float velocidadey;
 	float aceleracaox;
 	float aceleracaoy;
+	unsigned char fragContraMao;
+	unsigned char fragFreiadaBrusca;
+	unsigned char fragVelocidadeInadequada;
+	unsigned char fragAceleracaoInadequada;
+	bool spoted;
 }blob;
 
 struct Run{
@@ -56,7 +61,7 @@ struct Run{
 };
 
 std::deque< std::vector< blob > > filaBlob;
-std::deque< cv::Mat > filaImage;
+//std::deque< cv::Mat > filaImage;
 
 
 std::vector< std::vector<Run> > run(const cv::Mat &matrix){
@@ -199,6 +204,57 @@ bool quadranteInverso(float x1, float y1, float x2, float y2){
 	return false;
 }
 
+void convertImage(cv::Mat original, char nome[], blob varBlob){
+	cv::Mat image(original,cv::Rect(varBlob.minx,varBlob.miny,(varBlob.maxx-varBlob.minx),(varBlob.maxy-varBlob.miny)));	
+	float sample[224*224*3];	
+	if(image.rows < image.cols){
+	 	 cv::resize(image,image,cv::Size((int)(256*image.cols/image.rows),256));
+	}else{
+	 	 cv::resize(image,image,cv::Size(256,(int)256*image.rows/image.cols));
+   }
+   const int cropSize = 224;
+   const int offsetW = (image.cols - cropSize) / 2;
+   const int offsetH = (image.rows - cropSize) / 2;
+   const cv::Rect roi(offsetW, offsetH, cropSize, cropSize);
+
+   image = image(roi).clone();
+	cv::cvtColor(image,image,cv::COLOR_BGR2RGB);
+	int countIndexSample = 0;
+	FILE *arq = fopen(nome,"wt");
+	if(arq == NULL){
+		printf("falha na escrita do arquivo");	
+		return;
+	}
+	
+	for(int j = 0;j < image.rows;j++){
+		for(int i = 0;i < image.cols;i++){
+	    	sample[countIndexSample] = ((((float)image.at<cv::Vec3b>(j,i)[0]/255) - 0.485)/0.229);
+
+			fprintf(arq,"%f ",sample[countIndexSample]);
+			countIndexSample++;
+	 	} 
+	}
+	
+	for(int j = 0;j < image.rows;j++){
+	 	for(int i = 0;i < image.cols;i++){
+	      sample[countIndexSample] = ((((float)image.at<cv::Vec3b>(j,i)[1]/255) - 0.456)/0.224); 
+
+			fprintf(arq,"%f ",sample[countIndexSample]);
+			countIndexSample++;
+	 	}
+	}
+	
+	for(int j = 0;j < image.rows;j++){
+	 	for(int i = 0;i < image.cols;i++){
+	     	sample[countIndexSample] = ((((float)image.at<cv::Vec3b>(j,i)[2]/255) - 0.406)/0.225);
+
+			fprintf(arq,"%f ",sample[countIndexSample]);
+			countIndexSample++;
+	 	}
+	}
+	fclose(arq);
+}
+
 void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram2D &histPos1, Histogram2D &histPos2, Histogram2D &histPos3, Histogram2D &histPos4, Histogram &histVel, Histogram &histAcc){
     uchar cor;
    
@@ -234,6 +290,11 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 					 varBlob.key = countBlobs;     
 					 varBlob.verificado = false;
 					 varBlob.verificadoAcc = false;
+					 varBlob.fragContraMao = 0;
+					 varBlob.fragVelocidadeInadequada = 0;
+					 varBlob.fragAceleracaoInadequada = 0;
+					 varBlob.fragFreiadaBrusca = 0;
+					 varBlob.spoted = false;
 					          
                 
                if(((varBlob.maxx - varBlob.minx) > 50) && ((varBlob.maxy - varBlob.miny) > 50)){
@@ -252,7 +313,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
     }
     countFrame++;
 	 filaBlob.push_front(v);
-	 filaImage.push_front(original);
+	 //filaImage.push_front(original);
 	 static std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	 if(countBlobs > MAX_ID){
 	 	 countBlobs = 0;
@@ -281,8 +342,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 		 }
 
 		 filaBlob.pop_back();
-		 filaImage.back().release();
-		 filaImage.pop_back();
+		 //filaImage.back().release();
+		 //filaImage.pop_back();
 		 
 	 }
 	 if(filaBlob.size() > 1){
@@ -310,7 +371,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
 
 			 	bi.key = b.key;
-				bi.verificado = true;	
+				bi.verificado = true;
+				bi.spoted = b.spoted;	
 				std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 		 		float elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
 			 	if(elapsedTime){
@@ -320,69 +382,74 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 					
 					if((bi.velocidadex > 0) && (bi.velocidadey > 0)){
 				 		if(histPos1.insertHist(bi.posx,bi.posy)){
-							//std::cout << "Quad1 dirigindo na mão correta " << std::endl;
+							
 							 cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
-							///std::cout << "Quad1 dirigindo na contra mão " << std::endl;
+
+							bi.fragContraMao = b.fragContraMao + 1;
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
 						}
 					}else if((bi.velocidadex > 0) &&(bi.velocidadey < 0)){
 						if(histPos2.insertHist(bi.posx,bi.posy)){
-							//std::cout << "Quad2 dirigindo na mão correta " << std::endl;
+
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
-							//std::cout << "Quad2 dirigindo na contra mão " << std::endl;
+
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
+																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));
+							bi.fragContraMao = b.fragContraMao + 1;							
 						}
 					}else if((bi.velocidadex < 0) &&(bi.velocidadey < 0)){
 						if(histPos3.insertHist(bi.posx,bi.posy)){
-							//std::cout << "Quad3 dirigindo na mão correta " << std::endl;
+
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
+																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));
+													
 						}else{
-							//std::cout << "Quad3 dirigindo na contra mão " << std::endl;
+
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
+																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));	
+							bi.fragContraMao = b.fragContraMao + 1;						
 						}
 					}else{
 						if(histPos4.insertHist(bi.posx,bi.posy)){
-							//std::cout << "Quad4 dirigindo na mão correta " << std::endl;
+
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
-							//std::cout << "Quad4 dirigindo na contra mão " << std::endl;
+
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
+																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));		
+							bi.fragContraMao = b.fragContraMao + 1;					
 						}					
 					}
 					if(histVel.insertHist(sqrt((bi.velocidadex*bi.velocidadex)+(bi.velocidadey*bi.velocidadey)))){
 						cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),10,cv::Scalar(0,255,0),-5);					
 					}else{
+						bi.fragVelocidadeInadequada = b.fragVelocidadeInadequada+1;
 						cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),10,cv::Scalar(0,0,255),-5);
 					}
 					if(b.verificado){
 						bi.aceleracaox = (bi.velocidadex - b.velocidadex)*1000/elapsedTime;
 						bi.aceleracaoy = (bi.velocidadey - b.velocidadey)*1000/elapsedTime;
 						if(histAcc.insertHist(sqrt((bi.aceleracaox*bi.aceleracaox)+(bi.aceleracaoy*bi.aceleracaoy)))){//podemos pegar anomalia na aceleração
+						}else{
 							if(b.verificadoAcc){
 								if(matchSignal(b.aceleracaox,b.aceleracaoy,bi.aceleracaox,b.aceleracaoy) && 													matchSignal(b.velocidadex,b.velocidadey,bi.velocidadex,bi.velocidadey)){
 									if(quadranteInverso(bi.aceleracaox,bi.aceleracaoy,bi.velocidadex,bi.velocidadey)){
-										std::cerr << "freiada brusca?" << std::endl;							
+										bi.fragFreiadaBrusca = b.fragFreiadaBrusca + 1;							
 									}	
 								}
-							}
-							
+							}else{
+								bi.fragAceleracaoInadequada = b.fragAceleracaoInadequada + 1;
+							}						
 						}
 
 						bi.verificadoAcc = true;
 					}
-					
-					//histVelY.insertHist(fabs(bi.velocidadey));
-					//std::cout << bi.velocidadex <<" , " << bi.velocidadey << std::endl;
 				}else{
 					bi.verificado = false;				
 				}
@@ -395,11 +462,43 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 }
 	 for(int i = 0; i < filaBlob[0].size(); i++){
 		 blob &b(filaBlob[0][i]);
-//		 cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
-		 char nameAux[10];
-		 sprintf(nameAux,"%d",b.key);
+		 
+	 	 //cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
+	 	 char nameAux[10];
+	 	 sprintf(nameAux,"%d",b.key);
 		 cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.8,cv::Scalar(0,0,255),2);
- 		 //salvaSubImagem(countFrame, b.key, original, pasta, b);
+		 if(!b.spoted){
+			 b.spoted = true;
+
+
+ 		 	 //salvaSubImagem(countFrame, b.key, original, pasta, b);
+			 char aux[50] = "dataSettxt/";
+			 strcat(aux,nameAux);
+			 bool anomalia = false;
+			 if(b.fragVelocidadeInadequada>0){
+			 	 strcat(aux,"Vel");
+				 anomalia = true;
+			 }
+			 if(b.fragAceleracaoInadequada>0){
+			 	 strcat(aux,"Acc");
+				 anomalia = true;
+			 }
+			 if(b.fragFreiadaBrusca > 0){
+			 	 strcat(aux,"FrB");
+				 anomalia = true;
+			 }
+			 if(b.fragContraMao > 0){
+			 	 strcat(aux,"ctr");
+				 anomalia = true;
+			 }
+			 if(anomalia){
+ 			 	convertImage(original, aux, b);
+			 }
+			 /*char aux2[56] = "./cnn ";
+			 strcat(aux2,aux);
+			 system(aux2);*/
+  		 }
+
 		 
   
 	 }
@@ -460,7 +559,7 @@ int main(int argc, char *argv[]){
 		findBlobs(R,matRGB,original,argv[2], histPos1, histPos2, histPos3, histPos4, histVel, histAcc);
 
 		cv::imshow("testado e aprovado",matRGB);
-		cv::imshow("testado2",mat);
+		//cv::imshow("testado2",mat);
 		cv::imshow("Pos1",histPos1.debug());
 		cv::imshow("Pos2",histPos2.debug());
 		cv::imshow("Pos3",histPos3.debug());
@@ -472,7 +571,7 @@ int main(int argc, char *argv[]){
 		if(k == 27){
 			std::cout << "encerrando o programa" << std::endl;
 			break;
-		}	
+		}
   	}
 	
 
@@ -480,10 +579,10 @@ int main(int argc, char *argv[]){
 		v.clear();	
 	}	
 	filaBlob.clear();
-	for(cv::Mat &m : filaImage){
+	/*for(cv::Mat &m : filaImage){
 		m.release();	
 	}
-	filaImage.clear();
+	filaImage.clear();*/
 	cap.release();
 	cv::destroyAllWindows();
 	return 0;
