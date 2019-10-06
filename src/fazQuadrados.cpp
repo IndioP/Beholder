@@ -10,7 +10,7 @@
 #include "Histogram.h"
 #include "Histogram2D.h"
 
-#define GRANULARIDADE 2	
+#define GRANULARIDADE 6		
 #define MAX_ITERATIONS 500
 #define MAX_ID 10000
 #define DISTANCIA 100
@@ -220,7 +220,7 @@ void convertImage(cv::Mat original, char nome[], blob varBlob){
    image = image(roi).clone();
 	cv::cvtColor(image,image,cv::COLOR_BGR2RGB);
 	int countIndexSample = 0;
-	FILE *arq = fopen(nome,"wt");
+	FILE *arq = fopen("vai.txt","wt");
 	if(arq == NULL){
 		printf("falha na escrita do arquivo");	
 		return;
@@ -383,7 +383,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 				bi.fragFreiadaBrusca = b.fragFreiadaBrusca;
 
 				std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-		 		float elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
+		 		float elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(t2-t1).count();
 			 	if(elapsedTime){
 					contaVerificados++;
 					bi.velocidadex = (bi.posx - b.posx)*1000/elapsedTime;
@@ -392,46 +392,46 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 					if((bi.velocidadex > 0) && (bi.velocidadey > 0)){
 				 		if(histPos1.insertHist(bi.posx,bi.posy)){
 							
-							 cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
+							 //cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
 
 							bi.fragContraMao++;
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																		//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
 						}
 					}else if((bi.velocidadex > 0) &&(bi.velocidadey < 0)){
 						if(histPos2.insertHist(bi.posx,bi.posy)){
 
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
 
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																		//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));
 							bi.fragContraMao++;							
 						}
 					}else if((bi.velocidadex < 0) &&(bi.velocidadey < 0)){
 						if(histPos3.insertHist(bi.posx,bi.posy)){
 
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));
 													
 						}else{
 
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));	
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																		//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));	
 							bi.fragContraMao++;						
 						}
 					}else{
 						if(histPos4.insertHist(bi.posx,bi.posy)){
 
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
 
-							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
-																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));		
+							//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+																		//cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));		
 							bi.fragContraMao++;					
 						}					
 					}
@@ -440,10 +440,10 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 				 		anomalia = true;
 			 		}
 					if(histVel.insertHist(sqrt((bi.velocidadex*bi.velocidadex)+(bi.velocidadey*bi.velocidadey)))){
-						cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),10,cv::Scalar(0,255,0),-5);					
+						//cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),3,cv::Scalar(0,255,0),-5);					
 					}else{
 						bi.fragVelocidadeInadequada++;
-						cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),10,cv::Scalar(0,0,255),-5);
+						//cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),3,cv::Scalar(0,0,255),-5);
 					}
 					if(bi.fragVelocidadeInadequada>1){
 			 	 		strcat(aux,"Vel");
@@ -477,6 +477,8 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 						bi.verificadoAcc = true;
 					}
 				}else{
+					//cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
+							//cv::Point(bi.maxx,bi.maxy),cv::Scalar(255,0,0));
 					bi.verificado = false;				
 				}
 				t1 = t2; 
@@ -492,7 +494,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 	 	 //cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
 	 	 char nameAux[50];
 	 	 sprintf(nameAux,"%d",b.key);
-		 cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.8,cv::Scalar(0,0,255),2);
+		 //cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.3,cv::Scalar(0,0,255),1);
 		 if(!b.spoted){
 			 b.spoted = true;
 
@@ -505,11 +507,12 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 			 
 			 if(anomalia){
  			 	convertImage(original, aux, b);
-			 }
-			 /*char aux2[75] = "./cnn ";
-			 strcat(aux2,aux);
-			 system(aux2);*/
-  		 }
+			 
+			 	char aux2[75] = "./DouglasGod vai.txt";
+			 	//strcat(aux2,aux);
+			 	system(aux2);
+  			}
+		 }
 
 		 
   
@@ -529,7 +532,7 @@ int main(int argc, char *argv[]){
 	cv::VideoCapture cap(argv[1]);
 	if(!cap.isOpened()){
 	    std::cout << "Error opening video stream orddd file" << std::endl;
-	    return -1;
+	    return -1; 	
   	}
 	cv::Mat mat;
 	cv::Mat matRGB;
@@ -550,7 +553,7 @@ int main(int argc, char *argv[]){
 
   	while(true){
 
-
+		static std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
   		for(int i = 0; i < GRANULARIDADE; i++){
 			cap >> matRGB;
 			if (matRGB.empty())
@@ -570,20 +573,25 @@ int main(int argc, char *argv[]){
 	
 		findBlobs(R,matRGB,original,argv[2], histPos1, histPos2, histPos3, histPos4, histVel, histAcc);
 
-		cv::imshow("testado e aprovado",matRGB);
+		//cv::imshow("testado e aprovado",matRGB);
 		//cv::imshow("testado2",mat);
-		cv::imshow("Pos1",histPos1.debug());
+		/*cv::imshow("Pos1",histPos1.debug());
 		cv::imshow("Pos2",histPos2.debug());
 		cv::imshow("Pos3",histPos3.debug());
-		cv::imshow("Pos4",histPos4.debug());
-		cv::imshow("Velocidade",histVel.debug());
-		cv::imshow("Aceleração",histAcc.debug());
+		cv::imshow("Pos4",histPos4.debug());*/
+		//cv::imshow("Velocidade",histVel.debug());
+		//cv::imshow("Aceleração",histAcc.debug());
 
-		int k = cv::waitKey(1);
+		/*int k = cv::waitKey(1);
 		if(k == 27){
 			std::cout << "encerrando o programa" << std::endl;
 			break;
-		}
+		}*/
+		std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+		float elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
+		std::cout << elapsedTime << std::endl;
+		t1 = t2;
+			
   	}
 	
 

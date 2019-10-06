@@ -1,6 +1,6 @@
 #include "Histogram.h"
 
-#define DBG 1000
+#define DBG 500
 #define DBGY 5
 
 Histogram::~Histogram(){
@@ -28,7 +28,7 @@ bool Histogram::insertHist(float num){
 
 	int aux = ((int) num)/passo;
 	if(aux >= tamanho-1){
-		std::cout << "entrada invalida" << std::endl;
+		//std::cout << "entrada invalida" << std::endl;
 		return false;	
 	}
 	float media = acumulador/tamanho;
@@ -41,7 +41,7 @@ void Histogram::removeHist(float num){
 
 	int aux = ((int) num)/passo;
 	if(aux >= tamanho-1){
-		std::cout << "entrada invalida" << std::endl;
+		//std::cout << "entrada invalida" << std::endl;
 		return;	
 	}
 	hist[aux]--;

@@ -1,6 +1,6 @@
 #include "Histogram2D.h"
 
-#define DBG 500
+#define DBG 250
 #define DBGY 5
 
 Histogram2D::~Histogram2D(){
@@ -42,7 +42,7 @@ bool Histogram2D::insertHist(int numX, int numY){
 	int auxX = numX/passoX;
 	int auxY = numY/passoY;
 	if(auxX >= tamanhoX|| auxY >= tamanhoY){
-		std::cout <<" vai dar errado " << std::endl;	
+		//std::cout <<" vai dar errado " << std::endl;	
 		return false;	
 	}
 	hist[auxX][auxY]++;
@@ -56,7 +56,7 @@ void Histogram2D::removeHist(int numX, int numY){
 	int auxX = numX/passoX;	
 	int auxY = numY/passoY;
 	if(auxX >= tamanhoX|| auxY >= tamanhoY){
-		std::cout <<" vai dar errado " << std::endl;
+		//std::cout <<" vai dar errado " << std::endl;
 		return;		
 	}
 	hist[auxX][auxY]--;
