@@ -256,7 +256,12 @@ void convertImage(cv::Mat original, char nome[], blob varBlob){
 }
 
 void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::Mat &original, char pasta[], Histogram2D &histPos1, Histogram2D &histPos2, Histogram2D &histPos3, Histogram2D &histPos4, Histogram &histVel, Histogram &histAcc){
-    uchar cor;
+	 char aux[25] = "dataSettxt/";
+
+	 bool anomalia = false;
+    
+	
+	 uchar cor;
    
     // union find
 	 unionFind(runs);
@@ -372,7 +377,11 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
 			 	bi.key = b.key;
 				bi.verificado = true;
-				bi.spoted = b.spoted;	
+				bi.spoted = b.spoted;
+				bi.fragContraMao = b.fragContraMao;
+				bi.fragAceleracaoInadequada = b.fragAceleracaoInadequada;
+				bi.fragFreiadaBrusca = b.fragFreiadaBrusca;
+
 				std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 		 		float elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
 			 	if(elapsedTime){
@@ -387,7 +396,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 																cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,255,0));						
 						}else{
 
-							bi.fragContraMao = b.fragContraMao + 1;
+							bi.fragContraMao++;
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));							
 						}
@@ -400,7 +409,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));
-							bi.fragContraMao = b.fragContraMao + 1;							
+							bi.fragContraMao++;							
 						}
 					}else if((bi.velocidadex < 0) &&(bi.velocidadey < 0)){
 						if(histPos3.insertHist(bi.posx,bi.posy)){
@@ -412,7 +421,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));	
-							bi.fragContraMao = b.fragContraMao + 1;						
+							bi.fragContraMao++;						
 						}
 					}else{
 						if(histPos4.insertHist(bi.posx,bi.posy)){
@@ -423,15 +432,23 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
 							cv::rectangle(debugFrame,cv::Point(bi.minx,bi.miny),
 																		cv::Point(bi.maxx,bi.maxy),cv::Scalar(0,0,255));		
-							bi.fragContraMao = b.fragContraMao + 1;					
+							bi.fragContraMao++;					
 						}					
 					}
+					if(bi.fragContraMao > 1){
+			 	 		strcat(aux,"ctr");
+				 		anomalia = true;
+			 		}
 					if(histVel.insertHist(sqrt((bi.velocidadex*bi.velocidadex)+(bi.velocidadey*bi.velocidadey)))){
 						cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),10,cv::Scalar(0,255,0),-5);					
 					}else{
-						bi.fragVelocidadeInadequada = b.fragVelocidadeInadequada+1;
+						bi.fragVelocidadeInadequada++;
 						cv::circle(debugFrame,cv::Point(bi.posx,bi.posy),10,cv::Scalar(0,0,255),-5);
 					}
+					if(bi.fragVelocidadeInadequada>1){
+			 	 		strcat(aux,"Vel");
+				 		anomalia = true;
+			 		}
 					if(b.verificado){
 						bi.aceleracaox = (bi.velocidadex - b.velocidadex)*1000/elapsedTime;
 						bi.aceleracaoy = (bi.velocidadey - b.velocidadey)*1000/elapsedTime;
@@ -440,11 +457,20 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 							if(b.verificadoAcc){
 								if(matchSignal(b.aceleracaox,b.aceleracaoy,bi.aceleracaox,b.aceleracaoy) && 													matchSignal(b.velocidadex,b.velocidadey,bi.velocidadex,bi.velocidadey)){
 									if(quadranteInverso(bi.aceleracaox,bi.aceleracaoy,bi.velocidadex,bi.velocidadey)){
-										bi.fragFreiadaBrusca = b.fragFreiadaBrusca + 1;							
+										bi.fragFreiadaBrusca++;
+										 if(b.fragFreiadaBrusca > 0){
+										 	 strcat(aux,"FrB");
+											 anomalia = true;
+										 }							
 									}	
 								}
 							}else{
-								bi.fragAceleracaoInadequada = b.fragAceleracaoInadequada + 1;
+								bi.fragAceleracaoInadequada++;
+								if(b.fragAceleracaoInadequada>1){
+			 	 					strcat(aux,"Acc");
+				 					anomalia = true;
+							   }
+			
 							}						
 						}
 
@@ -464,7 +490,7 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 		 blob &b(filaBlob[0][i]);
 		 
 	 	 //cv::rectangle(debugFrame,cv::Point(b.minx,b.miny),cv::Point(b.maxx,b.maxy),cv::Scalar(255,255,255));
-	 	 char nameAux[10];
+	 	 char nameAux[50];
 	 	 sprintf(nameAux,"%d",b.key);
 		 cv::putText(debugFrame,nameAux,cv::Point(b.minx,b.miny),cv::FONT_HERSHEY_SIMPLEX,0.8,cv::Scalar(0,0,255),2);
 		 if(!b.spoted){
@@ -472,29 +498,15 @@ void findBlobs(std::vector< std::vector<Run> > &runs, cv::Mat &debugFrame, cv::M
 
 
  		 	 //salvaSubImagem(countFrame, b.key, original, pasta, b);
-			 char aux[50] = "dataSettxt/";
-			 strcat(aux,nameAux);
-			 bool anomalia = false;
-			 if(b.fragVelocidadeInadequada>0){
-			 	 strcat(aux,"Vel");
-				 anomalia = true;
-			 }
-			 if(b.fragAceleracaoInadequada>0){
-			 	 strcat(aux,"Acc");
-				 anomalia = true;
-			 }
-			 if(b.fragFreiadaBrusca > 0){
-			 	 strcat(aux,"FrB");
-				 anomalia = true;
-			 }
-			 if(b.fragContraMao > 0){
-			 	 strcat(aux,"ctr");
-				 anomalia = true;
-			 }
+		 	 strcat(aux,nameAux);
+			 
+			
+			 
+			 
 			 if(anomalia){
  			 	convertImage(original, aux, b);
 			 }
-			 /*char aux2[56] = "./cnn ";
+			 /*char aux2[75] = "./cnn ";
 			 strcat(aux2,aux);
 			 system(aux2);*/
   		 }
